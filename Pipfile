@@ -1,0 +1,27 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+autopep8 = "*"
+pylint = "*"
+
+[packages]
+env = {editable = true,version = "*"}
+ipython = "*"
+pillow = "*"
+keras = "*"
+pandas = "*"
+matplotlib = "*"
+scikit-learn = "*"
+seaborn = "*"
+graphviz = "*"
+pydot = "*"
+jupyterlab = "*"
+tensorflow = "*"
+xgboost = "*"
+pypiwin32 = "*"
+
+[requires]
+python_version = "3.8"
