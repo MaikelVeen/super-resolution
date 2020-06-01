@@ -15,6 +15,8 @@ keras = "*"
 pandas = "*"
 matplotlib = "*"
 tensorflow = "*"
+google = "*"
+protobuf = "*"
 
 [requires]
 python_version = "3.8"
