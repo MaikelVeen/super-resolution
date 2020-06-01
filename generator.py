@@ -1,13 +1,10 @@
-from keras.layers import Dense
-from keras.layers.core import Activation
-from keras.layers.normalization import BatchNormalization
-from keras.layers.convolutional import UpSampling2D
-from keras.layers.core import Flatten
-from keras.layers import Input
-from keras.layers.convolutional import Conv2D, Conv2DTranspose
 from keras.models import Model, Sequential
+from keras.layers import Dense, Input
+from keras.layers.core import Activation, Flatten
+from keras.layers.normalization import BatchNormalization
+from keras.layers.convolutional import UpSampling2D, Conv2D, Conv2DTranspose
 from keras.layers.advanced_activations import LeakyReLU, PReLU
-
+import helper
 
 
 class Generator():
@@ -32,6 +29,7 @@ class Generator():
 		model = LeakyReLU(alpha = 0.2)(model)
 
 	def build_model(self):
+		helper.cprint("Building generator model")
 		model = Sequential()
 		model.add(Input(shape=self.input_shape))
 
