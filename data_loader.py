@@ -11,12 +11,21 @@ class DataLoader():
     self.lr_dir = f"{self.data_dir}/lr"
     self.extension = extension
 
-  def load_images(self):
-    images_hr = []
-    images_lr = []
+    self._load_images()
 
-  def get_low_res(self):
-    pass
+  def _load_images(self):
+    self.images_hr = self._load_set(self.hr_dir)
+    self.images_lr = self._load_set(self.lr_dir)
 
-  def get_high_res(self):
-    pass
+  def _load_set(self, directory):
+    images = []
+    for file in os.listdir(directory):
+      if file.endswith(self.extension):
+        images.append(cv2.imread(f"{directory}/{file}"))
+    return images
+
+  def get_lr_set(self):
+    return self.images_lr
+
+  def get_hr_set(self):
+    return self.images_hr
