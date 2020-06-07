@@ -1,4 +1,4 @@
-from network import SRGAN
+from sr_gan import SRGAN
 from dataset_generator import DatasetGenerator
 import helper
 
