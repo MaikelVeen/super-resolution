@@ -6,4 +6,4 @@ if __name__ == "__main__":
   helper.gprint("Starting...")
 
   # data_gen = DataGenerator()
-  srgan = SRGAN()
+  sr_gan = SRGAN()
