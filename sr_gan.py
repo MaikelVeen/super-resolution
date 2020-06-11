@@ -71,7 +71,7 @@ class SRGAN():
 
     generator_gan.compile(loss=mean_squared_loss,
                           loss_weights=[1., 1e-3],
-                          optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
+                          optimizer=Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
 
     if self.verbose:
       generator_gan.summary()
