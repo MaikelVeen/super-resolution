@@ -92,6 +92,11 @@ class SRGAN():
 
     batch_count = int(set_count / batch_size)
 
+    # loss history lists
+    real_losses = []
+    fake_losses = []
+    gan_losses = []
+
     # Train for x number of epochs
     for epoch in range(1, epochs):
       helper.bprint(f"EPOCH: {epoch}")
@@ -118,6 +123,10 @@ class SRGAN():
 
         helper.gprint("Loss HR , Loss LR, Loss GAN")
         helper.gprint(f"{loss_real}, {loss_fake}, {loss_gan}")
+      real_losses.append(loss_real)
+      fake_losses.append(loss_fake)
+      gan_losses.append(loss_gan)
+    helper.plot_loss(real_losses, fake_losses, gan_losses)
 
   def test(self):
     pass
