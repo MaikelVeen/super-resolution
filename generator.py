@@ -15,12 +15,15 @@ class Generator():
     """Returns the model object"""
     return self.generator
 
-  def _res_block(self, model, filters=64, kernel_size=3, strides=1):
+  def _res_block(self, model_in, filters=64, kernel_size=3, strides=1):
     """Appends a residual block to the sequential model """
 
-    model = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding="same")(model)
+    model = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding="same")(model_in)
+    model = BatchNormalization(momentum=0.8)(model)
     model = PReLU(alpha_initializer='zeros', alpha_regularizer=None, alpha_constraint=None, shared_axes=[1, 2])(model)
     model = Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding="same")(model)
+    model = BatchNormalization(momentum=0.8)(model)
+    model = Add()([model_in, model])
     return model
 
   def _upsample_block(self, model, filters=256, kernel_size=3, strides=1):
@@ -39,7 +42,7 @@ class Generator():
 
     # Add pre-residual blocks
     model = Conv2D(filters=64, kernel_size=9, strides=1, padding="same")(model_input)
-    model = PReLU(alpha_initializer='zeros', alpha_regularizer=None, alpha_constraint=None, shared_axes=[1,2])(model)
+    model = model_1 = PReLU(alpha_initializer='zeros', alpha_regularizer=None, alpha_constraint=None, shared_axes=[1,2])(model)
 
      # Add the residual blocks
     for _ in range(self.res_blocks):
@@ -47,7 +50,8 @@ class Generator():
 
     # Add post residuals block
     model = Conv2D(filters=64, kernel_size=3, strides=1, padding="same")(model)
-    #model = BatchNormalization(momentum = 0.5)(model)
+    model = BatchNormalization()(model)
+    model = Add()([model_1, model])
 
     # Add upsampling blocks
     for _ in range(self.upsampling):
@@ -56,6 +60,4 @@ class Generator():
     model = Conv2D(filters=3, kernel_size=9, strides=1, padding="same")(model)
     model = Activation('tanh')(model)
 
-    # Create final model oject and name it
-    f_model = Model(inputs=model_input, outputs=model)
-    return f_model
+    return Model(model_input, model)

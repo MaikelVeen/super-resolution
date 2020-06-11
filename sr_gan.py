@@ -47,8 +47,8 @@ class SRGAN():
     discriminator = Discriminator(self.image_shape).get_model()
 
     # Create optimizer and compile networks
-    generator.compile(loss=vgg_loss, optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
-    discriminator.compile(loss="binary_crossentropy", optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
+    generator.compile(loss=mean_squared_loss, optimizer=Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
+    discriminator.compile(loss="binary_crossentropy", optimizer=Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
 
     # Print model summaries
     if self.verbose:
