@@ -22,6 +22,9 @@ def vgg_loss(y, y_pred):
   loss_model.trainable = False
   return K.mean(K.square(loss_model(y) - loss_model(y_pred)))
 
+def mean_squared_loss(y_true, y_pred):
+  return K.mean(K.square(y_pred - y_true), axis=-1)
+
 class SRGAN():
   """ Class encapsulating the SR GAN network"""
 
@@ -66,7 +69,7 @@ class SRGAN():
 
     generator_gan = Model(inputs=input_generator_gan, outputs=[output_generator_gan, output_discriminator_gan])
 
-    generator_gan.compile(loss=[vgg_loss, "binary_crossentropy"],
+    generator_gan.compile(loss=mean_squared_loss,
                           loss_weights=[1., 1e-3],
                           optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08))
 
