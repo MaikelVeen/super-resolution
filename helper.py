@@ -14,7 +14,6 @@ def cprint(text):
 	""" Prints the text in cyan """
 	print(f'\033[36m {text} \033[0m')
 
-
 def plot_loss(real_losses, fake_losses, gan_losses):
 	""" Plots HR, LR and all Gan Losses"""
 	fig = plt.figure(figsize=(12, 6))
@@ -35,3 +34,16 @@ def plot_loss(real_losses, fake_losses, gan_losses):
 	ax.set_ylabel("Loss")
 	ax.set_title('Gan losses')
 	ax.grid(True)
+
+def print_progress(batch, total, epoch, loss):
+  statement = ""
+
+  for i in range(0,35):
+    statement += '='
+  statement += '\n'
+
+  statement += f"Training {batch}/{total} of epoch {epoch}. \n"
+  statement += f"Current GAN loss: {loss}. \n"
+
+  print(statement, sep=' ', end='', flush=True)
+
