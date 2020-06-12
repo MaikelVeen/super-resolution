@@ -18,6 +18,7 @@ tensorflow = "*"
 google = "*"
 protobuf = "*"
 opencv-python = "*"
+windows-curses = "*"
 
 [requires]
 python_version = "3.8"

@@ -13,6 +13,8 @@ from data_loader import DataLoader
 from generator import Generator
 from discriminator import Discriminator
 import helper
+import cv2
+import curses
 
 def vgg_54():
   return _vgg(20)
@@ -32,7 +34,7 @@ class SRGAN():
 
   def __init__(self, verbose=True):
     np.random.seed(420)
-    self.downscale_factor = 4   
+    self.downscale_factor = 4
     self.image_shape = (224, 224, 3)
     self.shape = (56, 56, 3)
     self.verbose = verbose
@@ -103,6 +105,12 @@ class SRGAN():
     assert set_count == len(lr_set), "Image set must be of equal length"
 
     batch_count = int(set_count / batch_size)
+    stdscr = curses.initscr()
+    curses.start_color()
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.halfdelay(1)
+    curses.noecho()
 
     # loss history lists
     real_losses = []
@@ -111,8 +119,6 @@ class SRGAN():
 
     # Train for x number of epochs
     for epoch in range(1, epochs):
-      helper.bprint(f"EPOCH: {epoch}")
-
       # Train on x random batches every epoch
       for b in range(batch_count):
         rand = np.random.randint(0, set_count, size=batch_size)
@@ -133,15 +139,31 @@ class SRGAN():
         gan_Y = np.ones((batch_size, 1), dtype = np.float32)
         loss_gan = gan.train_on_batch(lr_batch, [hr_batch, gan_Y])
 
-        helper.gprint("Loss HR , Loss LR, Loss GAN")
-        helper.gprint(f"{loss_real}, {loss_fake}, {loss_gan}")
+        helper.print_progress_bar(stdscr, b, batch_count, epoch, epochs, loss_real, loss_fake, loss_gan, True)
 
-        helper.print_progress(b, batch_count, epoch, loss_gan)
-      
         if b == batch_count - 1:
+
+          settings = {
+            'title': 'Super Resolution',
+            'tags': ['LR', 'SR', 'HR'],
+            'text': {
+              'font_color': (255, 255, 255),
+              'border_color': (0, 0, 0),
+              'font_size': 0.7,
+              'font_thickness': 2,
+              'border_thickness': 3,
+            }
+          }
+
           for i in range(0, 5):
-            im = np.concatenate((self.data_loader.denormalize(hr_batch[i]), self.data_loader.denormalize(sr[i])), axis=1)
-            cv2.imwrite(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", im)
+            y_hat = self.data_loader.denormalize(sr[i])
+            y = self.data_loader.denormalize(hr_batch[i])
+            x = self.data_loader.denormalize(lr_batch[i])
+            x = cv2.resize(x, (0, 0), fx=4, fy=4)
+
+            helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], settings)
+
+    curses.endwin()
 
 
   def test(self):

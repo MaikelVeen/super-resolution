@@ -1,4 +1,7 @@
 from matplotlib import pyplot as plt
+import cv2
+import numpy as np
+import curses
 
 def bprint(text):
 	""" Prints the text in blue """
@@ -14,6 +17,7 @@ def cprint(text):
 	""" Prints the text in cyan """
 	print(f'\033[36m {text} \033[0m')
 
+	
 def plot_loss(real_losses, fake_losses, gan_losses):
 	""" Plots HR, LR and all Gan Losses"""
 	fig = plt.figure(figsize=(12, 6))
@@ -35,15 +39,56 @@ def plot_loss(real_losses, fake_losses, gan_losses):
 	ax.set_title('Gan losses')
 	ax.grid(True)
 
-def print_progress(batch, total, epoch, loss):
-  statement = ""
 
-  for i in range(0,35):
-    statement += '='
-  statement += '\n'
+def print_progress_bar(stdscr, batch, batch_count, epoch, epochs_count, loss_real, loss_fake, loss_gan, production=False):
+	progress = int(50 * batch // batch_count)
+	total_progress = int(50 * epoch // epochs_count)
 
-  statement += f"Training {batch}/{total} of epoch {epoch}. \n"
-  statement += f"Current GAN loss: {loss}. \n"
+	# Progress bar for all epochs
+	stdscr.addstr(1, 1, "Total progress   : ")
+	stdscr.addstr("█" * total_progress, curses.color_pair(1))
+	stdscr.addstr('-' * (50 - total_progress))
 
-  print(statement, sep=' ', end='', flush=True)
+	# Progress bar for current epoch
+	stdscr.addstr(2, 1, "Epoch " + str(epoch) + " progress : ")
+	stdscr.addstr("█" * progress, curses.color_pair(1))
+	stdscr.addstr('-' * (50 - progress))
 
+	stdscr.addstr(4, 1, "LOSS HR  : " + str(loss_real))
+	stdscr.addstr(5, 1, "LOSS LR  : " + str(loss_fake))
+	stdscr.addstr(6, 1, "LOSS GAN : " + str(loss_gan))
+
+	# A production run will be faster, but won't allow you to terminate the process without
+	# shutting down the terminmal.
+	if not production:
+		stdscr.addstr(8, 1, "Press 'q' to quit training.")
+		if stdscr.getch() == ord('q'):
+			exit()
+
+	stdscr.refresh()
+
+
+def save_result(filename, images, settings, axis=1):
+	image = np.concatenate(images, axis=axis)
+
+	# Settings
+	font = cv2.FONT_HERSHEY_SIMPLEX
+	title = settings['title']
+	tags = settings['tags']
+	font_color = settings['text']['font_color']
+	border_color = settings['text']['border_color']
+	font_size = settings['text']['font_size']
+	font_thickness = settings['text']['font_thickness']
+	border_thickness = settings['text']['border_thickness']
+	height, width, channels = image.shape
+
+	for i in range(len(tags)):
+		text = tags[i]
+		x = int(((width / 3) * i) + 10)
+		y = int(height * 0.95)
+		# Draw border
+		cv2.putText(image, text, (x, y), font, font_size, border_color, border_thickness, cv2.LINE_AA)
+		# Draw text
+		cv2.putText(image, text, (x, y), font, font_size, font_color, font_thickness, cv2.LINE_AA)
+
+	cv2.imwrite(filename, image)
