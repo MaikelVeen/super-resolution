@@ -1,9 +1,10 @@
 import os
 import numpy as np
 import cv2
-import helper
 
 class DatasetGenerator():
+  """Util class that generates large amounts of hr and lr images from photos"""
+
   def __init__(self, directory, extension='.png', size=224, downscale_factor=4):
     dirpath = os.path.dirname(os.path.abspath(__file__))
     self.data_dir = f'{dirpath}/{directory}'
@@ -14,14 +15,9 @@ class DatasetGenerator():
     self._generate_hr_set(size)
     self._generate_lr_set(downscale_factor)
 
-  def _crop(self, img, cropx, cropy, divisionx, divisiony):
-    y, x, z = img.shape
-    startx = x // divisionx - (cropx // divisiony)
-    starty = y // divisionx - (cropy // divisiony)
-    return img[starty:starty + cropy, startx:startx + cropx, :]
-
-  def _get_name(self, count):
-    return str(count).zfill(6) + '.png'
+  def _get_imname(self, count):
+    """Returns the filename of a generated image"""
+    return f"{str(count).zfill(6)}.png"
 
   def _generate_hr_set(self, size):
     count = 0
@@ -29,16 +25,19 @@ class DatasetGenerator():
     for file in os.listdir(self.data_dir):
       if file.endswith(self.extension):
         image = cv2.imread(f"{self.data_dir}/{file}")
+        count = self._crop_image(image, size, count)
 
-        for i in range(1, 5):
-          count = self._crop_image(image, size, i, count)
-
-  def _crop_image(self, image, size, division, count):
-    count = count + 1
-    image_crop = self._crop(image, size, size, division, division)
-    cv2.imwrite(f"{self.hr_dir}/{self._get_name(count)}", image_crop)
+  def _crop_image(self, image, size, count):
+    """Crops an image into squares and saves them to the file system"""
+    for y in range(0, image.shape[0], size):
+      for x in range(0, image.shape[1], size):
+        # Crop and save if square and high enough variance
+        cropped_image = image[y:y + size, x:x + size, :]
+        if self._check_validity(cropped_image):
+          cv2.imwrite(f"{self.hr_dir}/{self._get_imname(count)}", cropped_image)
+        count += 1
     return count
-
+  
   def _generate_lr_set(self, downscale_factor):
     for file in os.listdir(self.hr_dir):
       if file.endswith(self.extension):
@@ -47,3 +46,13 @@ class DatasetGenerator():
 
         image = cv2.resize(image, (x // downscale_factor, y // downscale_factor), interpolation=cv2.INTER_CUBIC)
         cv2.imwrite(f"{self.lr_dir}/{file}", image)
+
+  def _check_validity(self, image):
+    if not image.shape[0] == image.shape[1]:
+      return False
+   
+    variance = np.var(image)
+    if variance < 500:
+      return False
+   
+    return True
