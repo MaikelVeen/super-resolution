@@ -19,6 +19,7 @@ google = "*"
 protobuf = "*"
 opencv-python = "*"
 windows-curses = "*"
+colorama = "*"
 
 [requires]
 python_version = "3.8"

@@ -1,20 +1,21 @@
+import os
+import time
+import curses
+import sys
+import cv2
 import numpy as np
-import cv2 
-import os 
 
-import tensorflow.keras.backend as K
-from tensorflow.keras.applications.vgg19 import VGG19, preprocess_input
+from tensorflow.keras.applications.vgg19 import VGG19
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.optimizers import Adam
 
-from data_loader import DataLoader
+from image_batch_loader import ImageBatchLoader
 from generator import Generator
 from discriminator import Discriminator
 import helper
-import cv2
-import curses
+
 
 def vgg_54():
   return _vgg(20)
@@ -22,46 +23,44 @@ def vgg_54():
 def _vgg(output_layer):
   vgg = VGG19(input_shape=(None, None, 3), include_top=False)
   vgg.trainable = False
-  for l in vgg.layers:
-    l.trainable = False
+  for layer in vgg.layers:
+    layer.trainable = False
   return Model(vgg.input, vgg.layers[output_layer].output)
-
-def mean_squared_loss(y_true, y_pred):
-  return K.mean(K.square(y_pred - y_true), axis=-1)
 
 class SRGAN():
   """ Class encapsulating the SR GAN network"""
 
   def __init__(self, verbose=True):
-    np.random.seed(420)
+    # TODO: get these from argument list or config file
     self.downscale_factor = 4
     self.image_shape = (224, 224, 3)
     self.shape = (56, 56, 3)
     self.verbose = verbose
-
+    self.batch_size = 20
+    self.max_bath_size = sys.maxsize
     self.mean_squared_error = MeanSquaredError()
     self.vgg = vgg_54()
 
     # Create data loader object
-    self.data_loader = DataLoader('data')
+    self.batch_loader = ImageBatchLoader(self.batch_size)
 
-    dis, gen, gan = self.compile()
+    dis, gen, gan = self._compile()
     self.train(dis, gen, gan)
 
-  def content_loss(self, y_pred, y_true):
+  def _content_loss(self, y_pred, y_true):
     sr_features = self.vgg(y_pred)
     hr_features = self.vgg(y_true)
 
     return self.mean_squared_error(hr_features, sr_features)
   
-  def compile(self):
+  def _compile(self):
      # Create network objects
     generator = Generator().get_model()
     discriminator = Discriminator(self.image_shape).get_model()
 
     # Create optimizer and compile networks
     adam = Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-    generator.compile(loss=self.content_loss, optimizer=adam)
+    generator.compile(loss=self._content_loss, optimizer=adam)
     discriminator.compile(loss="binary_crossentropy", optimizer=adam)
 
     # Print model summaries
@@ -83,7 +82,7 @@ class SRGAN():
 
     generator_gan = Model(inputs=input_generator_gan, outputs=[output_generator_gan, output_discriminator_gan])
 
-    generator_gan.compile(loss=[self.content_loss, "binary_crossentropy"],
+    generator_gan.compile(loss=[self._content_loss, "binary_crossentropy"],
                           loss_weights=[1., 1e-3],
                           optimizer=optimizer)
 
@@ -92,19 +91,10 @@ class SRGAN():
   
     return generator_gan
 
-  def train(self, discriminator, generator, gan, epochs=100, batch_size=20):
+  def train(self, discriminator, generator, gan, batch_size=20, epochs=100):
     """Train the gan"""
-
-    # Load the sets using the data loader
-    hr_set = self.data_loader.get_hr_set()
-    lr_set = self.data_loader.get_lr_set()
-
-    set_count = len(hr_set)
-
-    # Do a check if both sets are of equal length
-    assert set_count == len(lr_set), "Image set must be of equal length"
-
-    batch_count = int(set_count / batch_size)
+    batch_count = int(36900 / batch_size)
+    
     stdscr = curses.initscr()
     curses.start_color()
     curses.use_default_colors()
@@ -117,32 +107,37 @@ class SRGAN():
     fake_losses = []
     gan_losses = []
 
+    if self.max_bath_size < batch_count:
+      batch_count = self.max_bath_size
+
     # Train for x number of epochs
     for epoch in range(1, epochs):
+      self.batch_loader.reset()
       # Train on x random batches every epoch
-      for b in range(batch_count):
-        rand = np.random.randint(0, set_count, size=batch_size)
+      for batch in range(batch_count):
+        hr_batch, lr_batch = self.batch_loader.next_batch()
+        sr_batch = generator.predict(lr_batch)
 
-        hr_batch = hr_set[rand]
-        lr_batch = lr_set[rand]
-
-        sr = generator.predict(lr_batch)
-
-        real_Y = np.random.uniform(0.7, 1.2, size=batch_size).astype(np.float32)
-        fake_Y = np.random.uniform(0.0, 0.3, size=batch_size).astype(np.float32)
+        real_y = np.random.uniform(0.7, 1.2, size=batch_size).astype(np.float32)
+        fake_y = np.random.uniform(0.0, 0.3, size=batch_size).astype(np.float32)
 
         discriminator.trainable = True
-        loss_real = discriminator.train_on_batch(hr_batch, real_Y)
-        loss_fake = discriminator.train_on_batch(sr, fake_Y)
+        loss_real = discriminator.train_on_batch(hr_batch, real_y)
+        loss_fake = discriminator.train_on_batch(sr_batch, fake_y)
         discriminator.trainable = False
 
-        gan_Y = np.ones((batch_size, 1), dtype = np.float32)
-        loss_gan = gan.train_on_batch(lr_batch, [hr_batch, gan_Y])
+        gan_y = np.ones((batch_size, 1), dtype=np.float32)
+        loss_gan = gan.train_on_batch(lr_batch, [hr_batch, gan_y])
 
-        helper.print_progress_bar(stdscr, b, batch_count, epoch, epochs, loss_real, loss_fake, loss_gan, True)
+        real_losses.append(loss_real)
+        fake_losses.append(loss_fake)
+        gan_losses.append(loss_gan)
 
-        if b == batch_count - 1:
+        helper.print_progress_bar(stdscr, batch, batch_count, epoch, epochs, loss_real, loss_fake, loss_gan, True)
 
+        if batch == 10 - 1:
+          
+          # TODO move this somewhere else
           settings = {
             'title': 'Super Resolution',
             'tags': ['LR', 'SR', 'HR'],
@@ -154,20 +149,23 @@ class SRGAN():
               'border_thickness': 3,
             }
           }
+          gan.save(f"gan-e{epoch}.h5")
 
+          # TODO maybe also move this.
           for i in range(0, 5):
-            y_hat = self.data_loader.denormalize(sr[i])
-            y = self.data_loader.denormalize(hr_batch[i])
-            x = self.data_loader.denormalize(lr_batch[i])
+            y_hat = self.batch_loader.denormalize(sr_batch[i])
+            y = self.batch_loader.denormalize(hr_batch[i])
+            x = self.batch_loader.denormalize(lr_batch[i])
             x = cv2.resize(x, (0, 0), fx=4, fy=4)
 
-            helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], settings)
+          helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], settings)
 
+    helper.plot_loss(real_losses, fake_losses, gan_losses)
     curses.endwin()
 
 
   def test(self):
     pass
 
-  def save_weights(self, network):
+  def _save_weights(self, network):
     pass

@@ -54,9 +54,9 @@ def print_progress_bar(stdscr, batch, batch_count, epoch, epochs_count, loss_rea
 	stdscr.addstr("█" * progress, curses.color_pair(1))
 	stdscr.addstr('-' * (50 - progress))
 
-	stdscr.addstr(4, 1, "LOSS HR  : " + str(loss_real))
-	stdscr.addstr(5, 1, "LOSS LR  : " + str(loss_fake))
-	stdscr.addstr(6, 1, "LOSS GAN : " + str(loss_gan))
+	stdscr.addstr(5, 1, "LOSS HR  : " + str(loss_real))
+	stdscr.addstr(6, 1, "LOSS LR  : " + str(loss_fake))
+	stdscr.addstr(7, 1, "LOSS GAN : " + str(loss_gan))
 
 	# A production run will be faster, but won't allow you to terminate the process without
 	# shutting down the terminmal.
