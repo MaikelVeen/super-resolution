@@ -10,8 +10,8 @@ class DatasetGenerator():
     self.data_dir = f'{dirpath}/{directory}'
     self.hr_dir = f"{self.data_dir}/hr"
     self.lr_dir = f"{self.data_dir}/lr"
+    self.variance_threshold = 300
     self.extension = extension
-
     self._generate_hr_set(size)
     self._generate_lr_set(downscale_factor)
 
@@ -50,9 +50,18 @@ class DatasetGenerator():
   def _check_validity(self, image):
     if not image.shape[0] == image.shape[1]:
       return False
-   
-    variance = np.var(image)
-    if variance < 500:
+
+    if not _filter_low_variance(image):
       return False
-   
+
     return True
+  
+  def _filter_low_variance(self, image):
+    below_threshold = 0
+    for i in range(3):
+      if(np.var(image[:, :, i]) < self.variance_threshold):
+        below_threshold+=1
+    if below_threshold == 3:
+      return False
+    else:
+      return True
