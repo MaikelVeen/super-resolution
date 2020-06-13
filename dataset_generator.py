@@ -57,6 +57,7 @@ class DatasetGenerator():
     return True
   
   def _filter_low_variance(self, image):
+    """ Filters cropped image when every color channel is below threshold """
     below_threshold = 0
     for i in range(3):
       if(np.var(image[:, :, i]) < self.variance_threshold):
