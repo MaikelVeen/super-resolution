@@ -33,7 +33,7 @@ class DatasetGenerator():
       for x in range(0, image.shape[1], size):
         # Crop and save if square and high enough variance
         cropped_image = image[y:y + size, x:x + size, :]
-        if self._check_validity(cropped_image):
+        if self._check_validity(cropped_image, size):
           cv2.imwrite(f"{self.hr_dir}/{self._get_imname(count)}", cropped_image)
         count += 1
     return count
@@ -47,8 +47,8 @@ class DatasetGenerator():
         image = cv2.resize(image, (x // downscale_factor, y // downscale_factor), interpolation=cv2.INTER_CUBIC)
         cv2.imwrite(f"{self.lr_dir}/{file}", image)
 
-  def _check_validity(self, image):
-    if not image.shape[0] == image.shape[1]:
+  def _check_validity(self, image, size):
+    if not image.shape[0] == size or not image.shape[1] == size:
       return False
 
     if not self._filter_low_variance(image):
