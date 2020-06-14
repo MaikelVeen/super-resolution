@@ -11,6 +11,7 @@ class DatasetGenerator():
     self.hr_dir = f"{self.data_dir}/hr"
     self.lr_dir = f"{self.data_dir}/lr"
     self.variance_threshold = 300
+    self.laplacian_variance_threshold = 50
     self.extension = extension
     self._generate_hr_set(size)
     self._generate_lr_set(downscale_factor)
@@ -51,7 +52,10 @@ class DatasetGenerator():
     if not image.shape[0] == size or not image.shape[1] == size:
       return False
 
-    if not self._filter_low_variance(image):
+    if self._filter_low_variance(image):
+      return False
+    
+    if self._filter_blurry_image(image):
       return False
 
     return True
@@ -63,6 +67,14 @@ class DatasetGenerator():
       if(np.var(image[:, :, i]) < self.variance_threshold):
         below_threshold+=1
     if below_threshold == 3:
-      return False
-    else:
       return True
+    else:
+      return False
+    
+  def _filter_blurry_image(self, image):
+    """ Filters blurry images out """
+    laplacian_var = cv2.Laplacian(image, cv2.CV_64F).var()
+    if laplacian_var < self.laplacian_variance_threshold:
+      return True
+    else:
+      return False
