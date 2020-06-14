@@ -10,8 +10,9 @@ class DatasetGenerator():
     self.data_dir = f'{dirpath}/{directory}'
     self.hr_dir = f"{self.data_dir}/hr"
     self.lr_dir = f"{self.data_dir}/lr"
+    self.variance_threshold = 300
+    self.laplacian_variance_threshold = 50
     self.extension = extension
-
     self._generate_hr_set(size)
     self._generate_lr_set(downscale_factor)
 
@@ -33,7 +34,7 @@ class DatasetGenerator():
       for x in range(0, image.shape[1], size):
         # Crop and save if square and high enough variance
         cropped_image = image[y:y + size, x:x + size, :]
-        if self._check_validity(cropped_image):
+        if self._check_validity(cropped_image, size):
           cv2.imwrite(f"{self.hr_dir}/{self._get_imname(count)}", cropped_image)
         count += 1
     return count
@@ -47,12 +48,33 @@ class DatasetGenerator():
         image = cv2.resize(image, (x // downscale_factor, y // downscale_factor), interpolation=cv2.INTER_CUBIC)
         cv2.imwrite(f"{self.lr_dir}/{file}", image)
 
-  def _check_validity(self, image):
-    if not image.shape[0] == image.shape[1]:
+  def _check_validity(self, image, size):
+    if not image.shape[0] == size or not image.shape[1] == size:
       return False
-   
-    variance = np.var(image)
-    if variance < 500:
+
+    if self._filter_low_variance(image):
       return False
-   
+    
+    if self._filter_blurry_image(image):
+      return False
+
     return True
+  
+  def _filter_low_variance(self, image):
+    """ Filters cropped image when every color channel is below threshold """
+    below_threshold = 0
+    for i in range(3):
+      if(np.var(image[:, :, i]) < self.variance_threshold):
+        below_threshold+=1
+    if below_threshold == 3:
+      return True
+    else:
+      return False
+    
+  def _filter_blurry_image(self, image):
+    """ Filters blurry images out """
+    laplacian_var = cv2.Laplacian(image, cv2.CV_64F).var()
+    if laplacian_var < self.laplacian_variance_threshold:
+      return True
+    else:
+      return False
