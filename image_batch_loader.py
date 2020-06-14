@@ -37,14 +37,14 @@ class ImageBatchLoader(object):
 
   def reset(self):
     """Reset the indice list"""
-    self.indices = self.init_indices
+    self.indices = np.copy(self.indices)
 
   def _get_random_batch(self):
     batch = []
     for _ in range(0, self.batch_size):
-      index = np.random.choice(self.indices, size=1)[0]
-      batch.append(index)
-      self.indices.remove(index)
+      index = np.random.choice(self.indices, size=1)
+      batch.append(index[0])
+      self.indices = np.delete(self.indices, index)
     return batch
 
   def _load_images(self, indices, directory):
@@ -55,7 +55,7 @@ class ImageBatchLoader(object):
       full_path = f"{directory}/{filename}"
       image = cv2.imread(full_path)
       images.append(self.normalize(image))
-    return np.array(images)
+    return np.array(images).astype(np.float32)
 
   def get_remaining_count(self):
     """Helper method to determine if all files have been seen in an epoch"""

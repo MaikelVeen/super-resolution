@@ -157,8 +157,7 @@ class SRGAN():
             y = self.batch_loader.denormalize(hr_batch[i])
             x = self.batch_loader.denormalize(lr_batch[i])
             x = cv2.resize(x, (0, 0), fx=4, fy=4)
-
-          helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], settings)
+            helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], settings)
 
     helper.plot_loss(real_losses, fake_losses, gan_losses)
     curses.endwin()
