@@ -51,7 +51,7 @@ class DatasetGenerator():
     if not image.shape[0] == image.shape[1]:
       return False
 
-    if not _filter_low_variance(image):
+    if not self._filter_low_variance(image):
       return False
 
     return True
