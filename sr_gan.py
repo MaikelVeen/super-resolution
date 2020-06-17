@@ -6,16 +6,29 @@ import cv2
 import numpy as np
 
 from tensorflow.keras.applications.vgg19 import VGG19
-from tensorflow.keras.models import Model
+from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import Input
+import tensorflow.keras.losses
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.optimizers import Adam
+from keras.utils.generic_utils import get_custom_objects
 
 from image_batch_loader import ImageBatchLoader
 from generator import Generator
 from discriminator import Discriminator
 import helper
 
+SAVE_SETTINGS =  {
+            'title': 'Super Resolution',
+            'tags': ['LR', 'SR', 'HR'],
+            'text': {
+              'font_color': (255, 255, 255),
+              'border_color': (0, 0, 0),
+              'font_size': 0.7,
+              'font_thickness': 2,
+              'border_thickness': 3,
+            }
+          }
 
 def vgg_54():
   return _vgg(20)
@@ -37,15 +50,15 @@ class SRGAN():
     self.shape = (56, 56, 3)
     self.verbose = verbose
     self.batch_size = 20
-    self.max_bath_size = sys.maxsize
+    self.max_bath_size = 1500
     self.mean_squared_error = MeanSquaredError()
     self.vgg = vgg_54()
 
     # Create data loader object
     self.batch_loader = ImageBatchLoader(self.batch_size)
 
-    dis, gen, gan = self._compile()
-    self.train(dis, gen, gan)
+    #dis, gen, gan = self.compile()
+    #self.train(dis, gen, gan)
 
   def _content_loss(self, y_pred, y_true):
     sr_features = self.vgg(y_pred)
@@ -53,7 +66,7 @@ class SRGAN():
 
     return self.mean_squared_error(hr_features, sr_features)
   
-  def _compile(self):
+  def compile(self):
      # Create network objects
     generator = Generator().get_model()
     discriminator = Discriminator(self.image_shape).get_model()
@@ -71,6 +84,10 @@ class SRGAN():
     gan = self._get_gan(discriminator, generator, adam)
     return discriminator, generator, gan
 
+  def load_models(self, gan_path, gen_path, dis_path):
+    self.generator = load_model(gen_path, custom_objects={'_content_loss': self._content_loss})
+    self.generator.summary()
+    
   def _get_gan(self, discriminator, generator, optimizer):
     """Returns the full combined network"""
     
@@ -137,34 +154,40 @@ class SRGAN():
 
         if batch == 10 - 1:
           
-          # TODO move this somewhere else
-          settings = {
-            'title': 'Super Resolution',
-            'tags': ['LR', 'SR', 'HR'],
-            'text': {
-              'font_color': (255, 255, 255),
-              'border_color': (0, 0, 0),
-              'font_size': 0.7,
-              'font_thickness': 2,
-              'border_thickness': 3,
-            }
-          }
-          gan.save(f"gan-e{epoch}.h5")
-
           # TODO maybe also move this.
           for i in range(0, 5):
             y_hat = self.batch_loader.denormalize(sr_batch[i])
             y = self.batch_loader.denormalize(hr_batch[i])
             x = self.batch_loader.denormalize(lr_batch[i])
             x = cv2.resize(x, (0, 0), fx=4, fy=4)
-            helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], settings)
+            helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/e-{epoch}-{i}.png", [x, y_hat, y], SAVE_SETTINGS)
+
+      if epoch % 5 == 0:
+        gan.save(f"gan-e{epoch}.h5")
+        discriminator.save(f"dis-e{epoch}.h5")
+        generator.save(f"gen-e{epoch}.h5")
 
     helper.plot_loss(real_losses, fake_losses, gan_losses)
     curses.endwin()
 
+  def predict(self, file_paths_lr, file_paths_hr, filenames):
+    helper.bprint("Loading image batches")
+    hr_images = self.batch_loader.load_images(file_paths_hr)
+    lr_images = self.batch_loader.load_images(file_paths_lr)
 
-  def test(self):
-    pass
+    helper.bprint("Upscaling low resolution images")
+    sr_images = self.generator.predict(lr_images)
+
+    helper.gprint("Saving results")
+    image_count = len(lr_images)
+    for i in range(0, image_count):
+      helper.cprint(f"Denormalizing image {i}")
+      lr_image = cv2.resize(self.batch_loader.denormalize(lr_images[i]), (0, 0), fx=4, fy=4)
+      hr_image = self.batch_loader.denormalize(hr_images[i])
+      sr_image = self.batch_loader.denormalize(sr_images[i])
+
+      helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/{filenames[i]}.png", 
+        [lr_image, sr_image, hr_image], SAVE_SETTINGS)
 
   def _save_weights(self, network):
     pass

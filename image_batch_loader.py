@@ -4,7 +4,7 @@ import cv2
 import helper
 
 class ImageBatchLoader(object):
-  def __init__(self, batch_size, directory='data', count=36900, extension='.png'):
+  def __init__(self, batch_size, directory='data', count=33201, extension='.png'):
     self.directory = f'{os.path.dirname(os.path.abspath(__file__))}/{directory}'
     self.hr_directory = f"{self.directory}/hr"
     self.lr_directory = f"{self.directory}/lr"
@@ -60,3 +60,12 @@ class ImageBatchLoader(object):
   def get_remaining_count(self):
     """Helper method to determine if all files have been seen in an epoch"""
     pass
+
+  def load_images(self, paths):
+    images = []
+    for path in paths:
+      full_path = f"{self.directory}/{path}"
+      image = cv2.imread(full_path)
+      images.append(self.normalize(image))
+    return np.array(images).astype(np.float32)
+
