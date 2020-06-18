@@ -37,7 +37,7 @@ class ImageBatchLoader(object):
 
   def reset(self):
     """Reset the indice list"""
-    self.indices = np.copy(self.indices)
+    self.indices = np.copy(self.init_indices)
 
   def _get_random_batch(self):
     batch = []
