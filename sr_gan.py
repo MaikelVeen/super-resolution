@@ -30,15 +30,6 @@ SAVE_SETTINGS =  {
             }
           }
 
-def vgg_54():
-  return _vgg(20)
-
-def _vgg(output_layer):
-  vgg = VGG19(input_shape=(None, None, 3), include_top=False)
-  vgg.trainable = False
-  for layer in vgg.layers:
-    layer.trainable = False
-  return Model(vgg.input, vgg.layers[output_layer].output)
 
 class SRGAN():
   """ Class encapsulating the SR GAN network"""
@@ -52,7 +43,7 @@ class SRGAN():
     self.batch_size = 20
     self.max_bath_size = 1500
     self.mean_squared_error = MeanSquaredError()
-    self.vgg = vgg_54()
+    self.vgg = self._get_vgg()
 
     # Create data loader object
     self.batch_loader = ImageBatchLoader(self.batch_size)
@@ -191,3 +182,13 @@ class SRGAN():
 
   def _save_weights(self, network):
     pass
+  
+  @staticmethod
+  def _get_vgg():
+    # Returns a non-trainable vgg Model
+    vgg_net = VGG19(input_shape=(None, None, 3), include_top=False)
+    vgg_net.trainable = False
+    for layer in vgg_net.layers:	
+        layer.trainable = False
+    return Model(vgg_net.input, vgg_net.layers[20].output)
+
