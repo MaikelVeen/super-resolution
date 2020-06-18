@@ -26,6 +26,7 @@ class ImageBatchLoader():
         self.extension = extension
         self.init_indices = self._get_indices()
         self.indices = self.init_indices
+        self.set_size = len(self.init_indices)
 
     def load_images(self, paths):
         """Returns an ndarray with image matrices
@@ -41,6 +42,10 @@ class ImageBatchLoader():
             images.append(self.normalize(image))
 
         return np.array(images).astype(np.float32)
+
+    def get_set_len(self):
+        """Returns the lengtht of the full data set"""
+        return self.set_size
 
     @staticmethod
     def normalize(input_data):
@@ -71,6 +76,7 @@ class ImageBatchLoader():
     def reset(self):
         """Reset the indice list to the initial list of indices"""
         self.indices = np.copy(self.init_indices)
+        assert len(self.indices) == len(self.init_indices)
 
     def _get_indices(self):
         # Returns a list with the filenames of the images

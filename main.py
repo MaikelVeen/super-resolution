@@ -4,7 +4,7 @@ import helper
 from colorama import init
 
 if __name__ == "__main__":
-  init()
-  helper.gprint("Starting...")
-  #data_gen = DatasetGenerator('data')
-  sr_gan = SRGAN()
+    init()
+    sr_gan = SRGAN()
+    sr_gan.compile()
+    sr_gan.train()

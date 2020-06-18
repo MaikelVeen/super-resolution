@@ -1,0 +1,16 @@
+lr_shape: 56
+hr_shape: 224
+verbose: True
+batch:
+  size: 20
+  max_per_epoch: 1500
+epochs: 15
+sample_saving:
+  count: 5
+  filename: "result-epoch-"
+weight_saving:
+  after_epoch: 5
+  gan_filename: "gan-weights-"
+  gen_filename: "gen-weights-"
+  dis_filename: "dis-weights-"
+empty_model_error: "Call compile or load first before training"
