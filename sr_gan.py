@@ -26,8 +26,6 @@ def _vgg(output_layer):
     l.trainable = False
   return Model(vgg.input, vgg.layers[output_layer].output)
 
-def mean_squared_loss(y_true, y_pred):
-  return K.mean(K.square(y_pred - y_true), axis=-1)
 
 class SRGAN():
   """ Class encapsulating the SR GAN network"""
@@ -53,6 +51,10 @@ class SRGAN():
     hr_features = self.vgg(y_true)
 
     return self.mean_squared_error(hr_features, sr_features)
+
+  def psnr(self, y_true, y_pred):
+    max_pixel = 1
+    return 10.0 * K.log(max_pixel / self.mean_squared_error(y_true, y_pred))
   
   def compile(self):
      # Create network objects
@@ -61,7 +63,7 @@ class SRGAN():
 
     # Create optimizer and compile networks
     adam = Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-    generator.compile(loss=self.content_loss, optimizer=adam)
+    generator.compile(loss=self.content_loss, metrics=[self.psnr], optimizer=adam)
     discriminator.compile(loss="binary_crossentropy", optimizer=adam)
 
     # Print model summaries
@@ -84,6 +86,7 @@ class SRGAN():
     generator_gan = Model(inputs=input_generator_gan, outputs=[output_generator_gan, output_discriminator_gan])
 
     generator_gan.compile(loss=[self.content_loss, "binary_crossentropy"],
+                          metrics=[self.psnr],
                           loss_weights=[1., 1e-3],
                           optimizer=optimizer)
 
@@ -92,7 +95,7 @@ class SRGAN():
   
     return generator_gan
 
-  def train(self, discriminator, generator, gan, epochs=100, batch_size=20):
+  def train(self, discriminator, generator, gan, epochs=100, batch_size=10):
     """Train the gan"""
 
     # Load the sets using the data loader
