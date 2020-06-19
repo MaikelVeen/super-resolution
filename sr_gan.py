@@ -3,6 +3,7 @@ import curses
 import cv2
 import numpy as np
 import yaml
+import pickle
 
 import tensorflow.keras.backend as K
 from tensorflow.keras.applications.vgg19 import VGG19
@@ -51,17 +52,33 @@ class SRGAN():
 
         self._compile_gan(adam)
 
-    def load_models(self, epoch, subfolder=''):
-        """"Loads the saved models from the filesystem"""
+    def load_weights(self, epoch, subfolder=''):
+        """"Loads the saved weights from the filesystem"""
         path = f"{os.path.dirname(os.path.abspath(__file__))}/weights/{subfolder}"
-        generator_path = f"{path}{self.config['weight_saving']['gen_filename']}e{epoch}.h5"
-        self.generator = load_model(generator_path, custom_objects={'_content_loss': self._content_loss})
+        generator_path = f"{path}{self.config['model_saving']['weight_saving']['gen_filename']}e{epoch}.h5"
+        self.generator.load_weights(generator_path)
 
-        discriminator_path = f"{path}{self.config['weight_saving']['dis_filename']}e{epoch}.h5"
-        self.discriminator = load_model(discriminator_path)
+        discriminator_path = f"{path}{self.config['model_saving']['weight_saving']['dis_filename']}e{epoch}.h5"
+        self.discriminator.load_weights(discriminator_path)
         
-        gan_path = f"{path}{self.config['weight_saving']['gan_filename']}e{epoch}.h5"
-        self.gan = load_model(gan_path, custom_objects={'_content_loss': self._content_loss, '_psnr': self._psnr})
+        gan_path = f"{path}{self.config['model_saving']['weight_saving']['gan_filename']}e{epoch}.h5"
+        self.gan.load_weights(gan_path)
+
+    def load_optimizers(self, epoch):
+        """"Loads the saved optimizers from the filesystem"""
+        path = f"{os.path.dirname(os.path.abspath(__file__))}/optimizers/"
+
+        with open(f"{path}{self.config['model_saving']['optimizer_saving']['gen_filename']}e{epoch}.pkl", 'rb') as f:
+            weight_values = pickle.load(f)
+        self.generator.optimizer.set_weights(weight_values)
+
+        with open(f"{path}{self.config['model_saving']['optimizer_saving']['dis_filename']}e{epoch}.pkl", 'rb') as f:
+            weight_values = pickle.load(f)
+        self.discriminator.optimizer.set_weights(weight_values)
+
+        with open(f"{path}{self.config['model_saving']['optimizer_saving']['gan_filename']}e{epoch}.pkl", 'rb') as f:
+            weight_values = pickle.load(f)
+        self.gan.optimizer.set_weights(weight_values)
 
     def train(self, epoch_start=0):
         """Training loop for the generative adversarial network"""
@@ -88,6 +105,9 @@ class SRGAN():
                 hr_batch, lr_batch = self.batch_loader.next_batch()
                 sr_batch = self.generator.predict(lr_batch)
 
+                if self.config['model_loading']['active'] is True and epoch == 1 and batch_count == 1:
+                    self.load_optimizers(self.config['model_loading']['epoch'])
+
                 # Create sliding prediction array
                 real_y = np.random.uniform(0.7, 1.2, size=batch_size).astype(np.float32)
                 fake_y = np.random.uniform(0.0, 0.3, size=batch_size).astype(np.float32)
@@ -111,8 +131,9 @@ class SRGAN():
                 if batch == batch_count - 1:
                     self._save_samples(lr_batch, sr_batch, hr_batch, epoch)
 
-            if epoch % self.config['weight_saving']['after_epoch'] == 0:
+            if self.config['model_saving']['active'] is True and epoch % self.config['model_saving']['after_epoch'] == 0:
                 self._save_weights(epoch)
+                self._save_optimizers(epoch)
 
         curses.endwin()
         helper.plot_loss(real_losses, fake_losses, gan_losses)
@@ -167,9 +188,31 @@ class SRGAN():
     def _save_weights(self, epoch):
         # Save the weight of all the models to the filesystem
         path = f"{os.path.dirname(os.path.abspath(__file__))}/weights/"
-        self.generator.save(f"{path}{self.config['weight_saving']['gen_filename']}e{epoch}.h5")
-        self.discriminator.save(f"{path}{self.config['weight_saving']['dis_filename']}e{epoch}.h5")
-        self.gan.save(f"{path}{self.config['weight_saving']['gan_filename']}e{epoch}.h5")
+        self.generator.save_weights(f"{path}{self.config['model_saving']['weight_saving']['gen_filename']}e{epoch}.h5")
+        self.discriminator.save_weights(f"{path}{self.config['model_saving']['weight_saving']['dis_filename']}e{epoch}.h5")
+        self.gan.save_weights(f"{path}{self.config['model_saving']['weight_saving']['gan_filename']}e{epoch}.h5")
+
+    def _save_optimizers(self, epoch):
+        # Save the weights of all the optimizers to the filesystem
+        path = f"{os.path.dirname(os.path.abspath(__file__))}/optimizers/"
+
+        worklist = [
+            self.generator,
+            self.discriminator,
+            self.gan
+        ]
+
+        filenames = [
+            self.config['model_saving']['optimizer_saving']['gen_filename'],
+            self.config['model_saving']['optimizer_saving']['dis_filename'],
+            self.config['model_saving']['optimizer_saving']['gan_filename']
+        ]
+
+        for network, filename in zip(worklist, filenames):
+            symbolic_weights = getattr(network.optimizer, 'weights')
+            weight_values = K.batch_get_value(symbolic_weights)
+            with open(f"{path}{filename}e{epoch}.pkl", 'wb') as f:
+                pickle.dump(weight_values, f)
 
     def _save_samples(self, lr_batch, sr_batch, hr_batch, epoch):
         # Saves x samples from the current batch

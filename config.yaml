@@ -8,9 +8,18 @@ epochs: 15
 sample_saving:
   count: 5
   filename: "result-epoch-"
-weight_saving:
+model_loading:
+  active: False
+  epoch: 20
+model_saving:
+  active: True
   after_epoch: 5
-  gan_filename: "gan-weights-"
-  gen_filename: "gen-weights-"
-  dis_filename: "dis-weights-"
+  weight_saving:
+    gan_filename: "gan-weights-"
+    gen_filename: "gen-weights-"
+    dis_filename: "dis-weights-"
+  optimizer_saving:
+    gan_filename: "gan-optimizers-"
+    gen_filename: "gen-optimizers-"
+    dis_filename: "dis-optimizers-"
 empty_model_error: "Call compile or load first before training"
