@@ -51,19 +51,26 @@ class SRGAN():
 
         self._compile_gan(adam)
 
-    def load_models(self, epoch):
-        #self.generator = load_model(gen_path, custom_objects={'_content_loss': self._content_loss})
-        #self.generator.summary()
-        pass
-    
-    def train(self):
+    def load_models(self, epoch, subfolder=''):
+        """"Loads the saved models from the filesystem"""
+        path = f"{os.path.dirname(os.path.abspath(__file__))}/weights/{subfolder}"
+        generator_path = f"{path}{self.config['weight_saving']['gen_filename']}e{epoch}.h5"
+        self.generator = load_model(generator_path, custom_objects={'_content_loss': self._content_loss})
+
+        discriminator_path = f"{path}{self.config['weight_saving']['dis_filename']}e{epoch}.h5"
+        self.discriminator = load_model(discriminator_path)
+        
+        gan_path = f"{path}{self.config['weight_saving']['gan_filename']}e{epoch}.h5"
+        self.gan = load_model(gan_path, custom_objects={'_content_loss': self._content_loss, '_psnr': self._psnr})
+
+    def train(self, epoch_start=0):
         """Training loop for the generative adversarial network"""
         self._pre_train_check()
 
         # Get batch size and calculate the batches per epoch
         batch_size = self.config['batch']['size']
         batch_count = min(int(self.set_size / batch_size), self.config['batch']['max_per_epoch'])
-        epochs = self.config['epochs']
+        epochs = self.config['epochs'] + epoch_start
 
         real_losses = []
         fake_losses = []
@@ -72,7 +79,7 @@ class SRGAN():
         stdscr = self._init_printer()
     
         # Train for x number of epochs
-        for epoch in range(1, epochs):
+        for epoch in range(1 + epoch_start, epochs + 1):
             self.batch_loader.reset()
             
             # Train on x random batches every epoch
