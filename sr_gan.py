@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import yaml
 
+import tensorflow.keras.backend as K
 from tensorflow.keras.applications.vgg19 import VGG19
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import Input
@@ -14,6 +15,7 @@ from image_batch_loader import ImageBatchLoader
 from generator import Generator
 from discriminator import Discriminator
 import helper
+
 
 class SRGAN():
     """ Class encapsulating the SR GAN network"""
@@ -139,6 +141,7 @@ class SRGAN():
 
         generator_gan = Model(inputs=input_generator_gan, outputs=[output_generator_gan, output_discriminator_gan])
         generator_gan.compile(loss=[self._content_loss, "binary_crossentropy"],
+                            metrics=[self._psnr],
                             loss_weights=[1., 1e-3],
                             optimizer=optimizer)
         
@@ -179,6 +182,10 @@ class SRGAN():
         sr_features = self.vgg(y_pred)
         hr_features = self.vgg(y_true)
         return self.mean_squared_error(hr_features, sr_features)
+    
+    def _psnr(self, y_true, y_pred):
+        max_pixel = 1
+        return 10.0 * K.log(max_pixel / self.mean_squared_error(y_true, y_pred))
 
     @staticmethod
     def _get_vgg():
