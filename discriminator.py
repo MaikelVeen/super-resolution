@@ -20,7 +20,7 @@ class Discriminator():
 
     model = Conv2D(filters=filters, kernel_size=kernel_size,
                      strides=strides, padding="same")(model)
-    #model.add(BatchNormalization(momentum=0.5))
+    model = BatchNormalization(momentum=0.5)(model)
     model = LeakyReLU(alpha=0.2)(model)
     return model
 
