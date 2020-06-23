@@ -23,3 +23,4 @@ model_saving:
     gen_filename: "gen-optimizers-"
     dis_filename: "dis-optimizers-"
 empty_model_error: "Call compile or load first before training"
+generate_data: False
