@@ -2,6 +2,20 @@ from matplotlib import pyplot as plt
 import cv2
 import numpy as np
 import curses
+import os
+
+
+SAVE_SETTINGS =  {
+            'title': 'Super Resolution',
+            'tags': ['LR', 'SR', 'HR'],
+            'text': {
+              'font_color': (255, 255, 255),
+              'border_color': (0, 0, 0),
+              'font_size': 0.7,
+              'font_thickness': 2,
+              'border_thickness': 3,
+            }
+          }
 
 def bprint(text):
 	""" Prints the text in blue """
@@ -54,9 +68,9 @@ def print_progress_bar(stdscr, batch, batch_count, epoch, epochs_count, loss_rea
 	stdscr.addstr("█" * progress, curses.color_pair(1))
 	stdscr.addstr('-' * (50 - progress))
 
-	stdscr.addstr(4, 1, "LOSS HR  : " + str(loss_real))
-	stdscr.addstr(5, 1, "LOSS LR  : " + str(loss_fake))
-	stdscr.addstr(6, 1, "LOSS GAN : " + str(loss_gan))
+	stdscr.addstr(5, 1, "LOSS HR  : " + str(loss_real))
+	stdscr.addstr(6, 1, "LOSS LR  : " + str(loss_fake))
+	stdscr.addstr(7, 1, "LOSS GAN : " + str(loss_gan))
 
 	# A production run will be faster, but won't allow you to terminate the process without
 	# shutting down the terminmal.
@@ -68,7 +82,8 @@ def print_progress_bar(stdscr, batch, batch_count, epoch, epochs_count, loss_rea
 	stdscr.refresh()
 
 
-def save_result(filename, images, settings, axis=1):
+def save_result(filename, images, settings=SAVE_SETTINGS, axis=1):
+	path = f"{os.path.dirname(os.path.abspath(__file__))}/result/{filename}"
 	image = np.concatenate(images, axis=axis)
 
 	# Settings
@@ -91,4 +106,5 @@ def save_result(filename, images, settings, axis=1):
 		# Draw text
 		cv2.putText(image, text, (x, y), font, font_size, font_color, font_thickness, cv2.LINE_AA)
 
-	cv2.imwrite(filename, image)
+	cv2.imwrite(path, image)
+
