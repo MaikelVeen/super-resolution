@@ -94,18 +94,18 @@ class SRGAN():
         gan_losses = []
 
         stdscr = self._init_printer()
-    
+
         # Train for x number of epochs
         for epoch in range(1 + epoch_start, epochs + 1):
             self.batch_loader.reset()
-            
+
             # Train on x random batches every epoch
             for batch in range(batch_count):
                 # Get all batches from batch loader and generator
                 hr_batch, lr_batch = self.batch_loader.next_batch()
                 sr_batch = self.generator.predict(lr_batch)
 
-                if self.config['model_loading']['active'] is True and epoch == 1 and batch_count == 1:
+                if self.config['model_loading']['active'] is True and epoch == 1 + epoch_start and batch_count == 1:
                     self.load_optimizers(self.config['model_loading']['epoch'])
 
                 # Create sliding prediction array
