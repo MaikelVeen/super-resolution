@@ -139,6 +139,7 @@ class SRGAN():
         helper.plot_loss(real_losses, fake_losses, gan_losses)
 
     def predict(self, file_paths_lr, file_paths_hr, filenames):
+        """Generates predictions for given images"""
         helper.bprint("Loading image batches")
         hr_images = self.batch_loader.load_images(file_paths_hr)
         lr_images = self.batch_loader.load_images(file_paths_lr)
