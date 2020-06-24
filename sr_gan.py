@@ -6,12 +6,12 @@ import yaml
 import pickle
 
 import tensorflow.keras.backend as K
+import tensorflow as tf
 from tensorflow.keras.applications.vgg19 import VGG19
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.layers import Input
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.optimizers import Adam
-
 from image_batch_loader import ImageBatchLoader
 from generator import Generator
 from discriminator import Discriminator
@@ -33,7 +33,7 @@ class SRGAN():
         self.mean_squared_error = MeanSquaredError()
         self.vgg = self._get_vgg()
         self.batch_loader = ImageBatchLoader(self.config['batch']['size'])
-        self.set_size = self.batch_loader.get_set_len()
+        self.set_size = self.batch_loader.set_size
 
     def compile(self):
         """Builds and compiles the discriminator, generator and gan"""
@@ -55,6 +55,7 @@ class SRGAN():
     def load_weights(self, epoch, subfolder=''):
         """"Loads the saved weights from the filesystem"""
         path = f"{os.path.dirname(os.path.abspath(__file__))}/weights/{subfolder}"
+
         generator_path = f"{path}{self.config['model_saving']['weight_saving']['gen_filename']}e{epoch}.h5"
         self.generator.load_weights(generator_path)
 
@@ -80,7 +81,7 @@ class SRGAN():
             weight_values = pickle.load(f)
         self.gan.optimizer.set_weights(weight_values)
 
-    def train(self, epoch_start=0):
+    def train(self, epoch_start=0, load_only=False):
         """Training loop for the generative adversarial network"""
         self._pre_train_check()
 
@@ -108,6 +109,9 @@ class SRGAN():
                 if self.config['model_loading']['active'] is True and epoch == 1 + epoch_start and batch_count == 1:
                     self.load_optimizers(self.config['model_loading']['epoch'])
 
+                if load_only:
+                    break
+
                 # Create sliding prediction array
                 real_y = np.random.uniform(0.7, 1.2, size=batch_size).astype(np.float32)
                 fake_y = np.random.uniform(0.0, 0.3, size=batch_size).astype(np.float32)
@@ -134,9 +138,12 @@ class SRGAN():
             if self.config['model_saving']['active'] is True and epoch % self.config['model_saving']['after_epoch'] == 0:
                 self._save_weights(epoch)
                 self._save_optimizers(epoch)
+            
+            if load_only:
+                    break
 
         curses.endwin()
-        helper.plot_loss(real_losses, fake_losses, gan_losses)
+        #helper.plot_loss(real_losses, fake_losses, gan_losses)
 
     def predict(self, file_paths_lr, file_paths_hr, filenames):
         """Generates predictions for given images"""
@@ -158,6 +165,38 @@ class SRGAN():
 
             helper.save_result(f"{os.path.dirname(os.path.abspath(__file__))}/result/{filenames[i]}.png", 
                 [lr_image, sr_image, hr_image])
+    
+    def evaluate(self):
+        """Calculates and prints the mean pnsr over validation data set"""
+        np.random.seed(420)
+        helper.gprint('Evaulating validation set')
+        self.train(load_only=True)
+        eval_batch_loader = ImageBatchLoader(batch_size=1, hr='/validation_hr', lr='/validation_lr')
+
+        nearest_metrics = []
+        cubic_metrics = []
+        sr_metrics = []
+
+        for i in range(0, eval_batch_loader.set_size):
+            print(f"Evaluating {i}")
+            hr_batch, lr_batch = eval_batch_loader.next_batch()
+            sr_batch = self.generator.predict(lr_batch)
+
+            lr_image = eval_batch_loader.denormalize(lr_batch[0])
+            hr_image = eval_batch_loader.denormalize(hr_batch[0])
+            sr_image = eval_batch_loader.denormalize(sr_batch[0])
+
+            nearest = cv2.resize(lr_image, (0, 0), fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
+            cubic = nearest = cv2.resize(lr_image, (0, 0), fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+
+            nearest_metrics.append(tf.image.psnr(nearest, hr_image, max_val=255))
+            cubic_metrics.append(tf.image.psnr(cubic, hr_image, max_val=255))
+            sr_metrics.append(tf.image.psnr(sr_image, hr_image, max_val=255)) 
+        
+        print(f"Mean of nearest neighbour interpolation PSNR: {np.mean(nearest_metrics)}")
+        print(f"Mean of cubic interpolation PSNR: {np.mean(cubic_metrics)}")
+        print(f"Mean of SRGAN PSNR: {np.mean(sr_metrics)}")
+
     
     def _compile_gan(self, optimizer):
         # Combines the discriminator and generator and compiles the gan
@@ -235,8 +274,8 @@ class SRGAN():
         return self.mean_squared_error(hr_features, sr_features)
     
     def _psnr(self, y_true, y_pred):
-        max_pixel = 1
-        return 10.0 * K.log(max_pixel / self.mean_squared_error(y_true, y_pred))
+        max_pixel = 255.0
+        return 10.0 * K.log((max_pixel ** 2) / self.mean_squared_error(y_true, y_pred))
 
     @staticmethod
     def _get_vgg():

@@ -12,16 +12,18 @@ class ImageBatchLoader():
     Attributes:
         directory (str): Path of top level data directory
         hr_directory (str): Path of hr image directory
-        batch_size (int): Path of lr image directory
+        lr_directory (str): Path of lr image directory
+        batch_size (int): Size of batches returned
         extension (str): Allowed extension for images
         init_indices (arr): List of all the filenames in the hr (and lr) directory
         indices (arr): List of filenames with currently sampled removed
+        hr (string): Path of hr directory relati
     """
 
-    def __init__(self, batch_size=20, directory='data', extension='.png'):
+    def __init__(self, batch_size=16, directory='data', extension='.png', hr='/hr', lr='/lr'):
         self.directory = f'{os.path.dirname(os.path.abspath(__file__))}/{directory}'
-        self.hr_directory = f"{self.directory}/hr"
-        self.lr_directory = f"{self.directory}/lr"
+        self.hr_directory = f"{self.directory}{hr}"
+        self.lr_directory = f"{self.directory}{lr}"
         self.batch_size = batch_size
         self.extension = extension
         self.init_indices = self._get_indices()
@@ -42,10 +44,6 @@ class ImageBatchLoader():
             images.append(self.normalize(image))
 
         return np.array(images).astype(np.float32)
-
-    def get_set_len(self):
-        """Returns the lengtht of the full data set"""
-        return self.set_size
 
     @staticmethod
     def normalize(input_data):
