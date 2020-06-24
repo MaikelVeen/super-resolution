@@ -187,7 +187,7 @@ class SRGAN():
             sr_image = eval_batch_loader.denormalize(sr_batch[0])
 
             nearest = cv2.resize(lr_image, (0, 0), fx=4, fy=4, interpolation=cv2.INTER_NEAREST)
-            cubic = nearest = cv2.resize(lr_image, (0, 0), fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+            cubic = cv2.resize(lr_image, (0, 0), fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
 
             nearest_metrics.append(tf.image.psnr(nearest, hr_image, max_val=255))
             cubic_metrics.append(tf.image.psnr(cubic, hr_image, max_val=255))
